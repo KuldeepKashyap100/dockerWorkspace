@@ -1,0 +1,205 @@
+1.  All the instructions here are used to setting up the image
+    image -> Template/ Blueprint for the container.
+    container -> is layer on top of the image it is a running instance of image
+    container does not copy over code and environment to new container, a container will use 
+    the environment stored in an image and just adds an extra layer on top of it(ex- running node server process)
+
+2.  FROM keyword
+    FROM -> allows us to build our image up on another base image
+    we can also build image from scratch but we need some kind of 
+    OS or other tool in there which our code needs
+    Just enter the image name it could be locally present on our system
+    or on Docker Hub. When we run any container using this image for 
+    the first time it will be downloaded and cached locally so that it won't be downloaded again 
+    snippet: FROM node
+
+3.  WORKDIR keyword
+    by default all the commands will be run inside the working directory of the image
+    and default working directory is root directory.
+    all the commands will work realtive to this directory
+    snippet: WORKDIR /app
+
+4.  COPY keyword
+    Now we have to tell docker which files present on our local should go on to the image
+    COPY command is used for that.
+    COPY . .  -> here we specify two paths, 
+    first path is our path present in our local system(i.e currently pointing to path where Dockerfile lives)[Host file path]
+    excluding the Dockerfile though
+    second path [image/container] file path
+    every image/container has its own file system that is detached from our file system
+    snippet: COPY . /app
+
+5.  RUN keyword
+    After copying all the files we want to run a command in the image
+    by default all the commands will be run inside the working directory of the image
+    and default working directory is root directory
+    snippet: RUN npm install
+
+6.  EXPOSE keyword
+    when we run the container it will not work though because container is isolated
+    from our local environment and as a result it has its own internal network
+    and when we listen to port in the node application inside our container
+    the container does not expose that port to our local machine,
+    so we won't be able to listen on that port just because something
+    is listening inside our container.
+    below command will let docker know that when this container is started
+    we wanna expose a port to our local system
+    it is only for documentation purposes, it actually does not do anything
+    snippet: EXPOSE 3000
+
+7.  CMD keyword
+    we could have used RUN node server.js
+    but this start the server when the image is being build
+    we should use CMD instruction. the difference is that it will not
+    be executed when the image is created but when the container is started based on that image.
+    the syntax is little bit different it takes an array as input and we have to split our command
+    if we don't specify CMD, CMD of base image will be executed.
+    with no base image and no CMD we will get an error.
+    snippet: CMD ["node", "server.js"]
+
+8.  docker build
+    now we have instructions to create an image
+    and that's what build command does
+    it tells docker to build a new custom image
+    based on a docker file and we also have to specify
+    the path where this docker file is located
+    snippet: docker build .
+    To set the name of a image, it is little different from container
+    snippet: "docker build -t image_name:tag" 
+    here tag defines a specialized image within a group of images
+    combination both should always generate unique identifier
+
+9.  After Build
+    above command will create an image and will return image id
+    now that image is created we can create an instance of it
+    which we call container using run command and image id
+    you don't always have to copy / write out the full id.
+    You can also just use the first (few) character(s) of image_id - just enough to have a unique identifier.
+    snippet: docker run image_id
+    we can also run the container using image name 
+    snippet: "docker run -p 3000:3000 --name new_container new_image:latest"
+    To expose a port we have to use -p flag, which stands for publish
+    it tells docker under which local port of our machine, 
+    this docker container port should be accessible
+    snippet: docker run -p local_port:container_exposed_port image_id
+
+10. Stop the container
+    snippet: docker stop container_name
+
+11. Layer based architecture and caching
+    images work on layer based architecture
+    all the instructions are cacheable layers and docker cache the response of these layers
+    and if rebuild again it will take split second because result of all the instructions
+    is cached. but let's say we have 5 layers and user changed something so layer 3 needs to 
+    rerun some instructions again now the below layer's will also not use the cache results but perform
+    operations again.
+
+12. Attached mode or Detached mode
+    We can run the container either in attached mode or detached mode.
+    by default, it is set to attached mode that means we will be able to
+    see the output of container in console we can disable it by adding -d flag
+    in run command. we can also use "docker attach container_name" to attach again
+    to the running container.
+
+13. LISTING COMMANDS
+    to list all running containers -> "docker ps"
+    to list all containers -> "docker ps -a"
+    to list all images -> "docker images"
+    ps stands for "process status"
+
+14. REMOVE COMMANDS
+    to remove container -> "docker rm container_name"
+    we can remove container if it is not already running
+    to remove images -> "docker rmi image_id"
+    we can remove images if it is not being used by any container(wheather is running or not)
+    to remove all containers that is not running -> "docker container prune"
+    to remove all images that is not being used by any container -> "docker image prune"
+
+15. CONTAINER START COMMANDS
+    snippet: docker start container_name
+    will start the already existing container
+    run command creates a new container every time.
+    To make the terminal on host interactive, we can use -i flag (that keeps the STDIN open)
+    in combination with -t flag (that creates sudeo terminal).
+    to name the containers while running 
+    we can use --name flag to set the name
+    to remove the container when it stops running, we can --rm flag when we start a container.
+
+
+16. Copy contents out of the running container
+    docker provides commands to copy files to and from the running container
+    it is very error prone but 2 scenarios where it could be used is getting
+    logs out of the running container or changing configuration files.
+    snippet: "docker cp souce_dir_of_host container_name:/target_dir_inside_container"
+
+17. Temporary and Permanent data 
+    file system for host machine, image, container are all 3 different
+    Images are read only (we rebuild image after every change so that our updated changes goes into images file system)
+    Container is layer on top of image is read-write(ex- we may generate a file on container running server 
+    which will contantly storing logs.)
+
+18. Two types of external data storages
+    Volumes -  managed by docker
+    Bind Mounts - managed by you
+
+19. Volumes
+    problem: when we remove containers all the read-write data is removed along with the container
+    solution: docker has a built in feature called Volumes and volumes help us persist the data
+    volumes are folders in host machine hard drive which are mounted(mapped or made available) into the containers
+    volumes persist if a container shuts down if a container restarts and mounts a volume
+    any data inside of that volume is available in the container
+    a container can read and write data from a volume
+
+20. Two types of volumes
+    Anonymous volumes - it does not have any name and it exists as long as our container exists
+    Named volumes - 
+    anonymous volumes are closely attached with the container
+    In both types docker sets up a folder/path on your local machine
+    exact location is unknown to you
+    Managed via docker volume commands 
+    To List all volumes
+    snippet: docker volume ls
+
+21. Removing Anonymous Volumes
+    We saw, that anonymous volumes are removed automatically, when a container is removed.
+    This happens when you start / run a container with the --rm option.
+    If you start a container without that option, the anonymous volume would NOT be removed, 
+    even if you remove the container (with docker rm ...).
+    Still, if you then re-create and re-run the container (i.e. you run docker run ... again), 
+    a new anonymous volume will be created. So even though the anonymous volume wasn't removed automatically, 
+    it'll also not be helpful because a different anonymous volume is attached the next time the container starts 
+    (i.e. you removed the old container and run a new one).
+    Now you just start piling up a bunch of unused anonymous volumes 
+    - you can clear them via docker volume rm VOL_NAME or docker volume prune.
+
+
+21. Named Volume
+    a defined path in the container is mapped to the created volume/mount
+    ex- some path on your hosting machine mapped to the /app/data
+    (With named volumes, volumes will survive container shutdown)
+    Name Volumes is great for the data that should be persistent but which you don't need to edit directly
+    because you don't have access to that folder on you host machine
+    snippet: docker run 3000:3000 -v host_path:container_path image_name
+    ex- docker run 3000:3000 -v feedback:/app/feedback image_name
+
+22. Bind Mounts 
+    problem: during development we change code a lot but we have to rebuild image every time
+    for the changes to get reflected that's where bind mounts can help us
+    bind mounts have some similarities with volumes but there is one key difference
+    where volumes are managed by docker and we don't know where on our host machine they are.
+    for bind mounts we do know it.
+    Because for bind mounts we as a developer set the path to which the container internal path
+    should be mapped on our host machine.
+    container cannot just write from volumes but also read from them, 
+    ofcourse we could put out source code into such bind mount and if we do that
+    we could then make sure that container is aware of that and the souce is actually not used
+    from that copied in snapshot but instead from bind mount
+    so bind mounts are perfect for persistent and editable data.
+    snippet: docker run 3000:3000 -v "absolute_project_path:/app image_name"
+    ex: docker run 3000:3000 -v "/Users/kuldeep/dev/nodeProject:/app" image_name
+    note- If you don't always want to copy and use the full path, you can use these shortcuts:
+    macOS / Linux: -v $(pwd):/app
+    Windows: -v "%cd%":/app
+
+23: To check errors while running container
+    snippet: docker logs container_name

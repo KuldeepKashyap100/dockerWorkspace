@@ -4,13 +4,13 @@
 # # container does not copy over code and environment to new container, a container will use 
 # # the environment stored in an image and just adds an extra layer on top of it(ex- running node server process)
 
-# # FROM allows us to build our image up on another base image
+# FROM node
+# # FROM -> allows us to build our image up on another base image
 # # we can also build image from scratch but we need some kind of 
 # # OS or other tool in there which our code needs
 # # Just enter the image name it could be locally present on our system
 # # or on Docker Hub. When we run any container using this image for 
 # # the first time it will be downloaded and cached locally so that it won't be downloaded again 
-# FROM node
 
 # # by default all the commands will be run inside the working directory of the image
 # # and default working directory is root directory.
@@ -39,7 +39,7 @@
 # # so we won't be able to listen on that port just because something
 # # is listening inside our container.
 # # below command will let docker know that when this container is started
-# # we wanna expose a port to our loacl system
+# # we wanna expose a port to our local system
 # # it is only for documentation purposes, it actually does not do anything
 # EXPOSE 3000
 
@@ -107,6 +107,8 @@ COPY . /app
 
 EXPOSE 3000
 
+VOLUME [ "/app/public" ]
+
 CMD ["node", "server.js"]
 
 
@@ -131,9 +133,9 @@ CMD ["node", "server.js"]
 
 
 # CONTAINER START COMMANDS
-# to name to containers while running 
+# to name the containers while running 
 # we can use --name flag to set the name
-# to remove to container when it stops running, we can --rm flag when we start a container.
+# to remove the container when it stops running, we can --rm flag when we start a container.
 
 # "docker start container_name" will start the already existing container
 # run command creates a new container every time.
