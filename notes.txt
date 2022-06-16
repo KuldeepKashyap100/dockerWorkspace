@@ -203,3 +203,29 @@
 
 23: To check errors while running container
     snippet: docker logs container_name
+
+24. Combining and merging different volumes
+    we have a container and we have volume and bind mount
+    we can mount both into the container
+    that means some folders inside of the container are mounted or connected
+    to folders on the host machine 
+    now let's say we already had files inside of the container
+    in that case they also now exists outside on the outside volume
+    and if you write a new file, it's also added in the folder on your host machine
+    and if the container then starts up and it finds files in the volume
+    and it doesn't have any internal files yet, it loads the files from the volume
+    that's what we utilize with the bind mount
+    here we don't have any files inside of the container, let's say,
+    but we have files on the local host machine 
+    In that case these files are basically also usable inside the container
+    note- If we mount bind mount, data present in the container will overwritten by bind mount data
+    ex- we can copy all the project dir to container and install node_modules but we can also bind mount
+    current project to container in that case node_modules will be removed.
+    To solve the above problem we have to explicitly tell docker that there are certain parts in
+    its internal file system that which should not be overwritten from outside in case we have a clash
+    and that can be achieved with another anonymous volume which we add to this docker container
+    this is also a use case of anonymous volume
+    snippet: ocker run 3000:3000 -v "/Users/kuldeep/dev/nodeProject:/app" -v "/app/node_modules" image_name
+    now why does anonymous volume helped here?
+    docker always evaluates all volumes you are setting on the container
+    and if there are clashes, the longer internal path wins
