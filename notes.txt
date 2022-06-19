@@ -225,7 +225,65 @@
     its internal file system that which should not be overwritten from outside in case we have a clash
     and that can be achieved with another anonymous volume which we add to this docker container
     this is also a use case of anonymous volume
-    snippet: ocker run 3000:3000 -v "/Users/kuldeep/dev/nodeProject:/app" -v "/app/node_modules" image_name
+    snippet: docker run 3000:3000 -v "/Users/kuldeep/dev/nodeProject:/app" -v "/app/node_modules" image_name
     now why does anonymous volume helped here?
     docker always evaluates all volumes you are setting on the container
     and if there are clashes, the longer internal path wins
+
+25. Read only volumes
+    By Default volumes are read/write.
+    which means container can read from them and write data to them
+    but we can restrict that by adding extra colon and add RO
+    snippet:  docker run 3000:3000 -v "/Users/kuldeep/dev/nodeProject:/app:RO" image_name
+    this means is container won't be able to write data in /app folder but we still be able to
+
+26. To see the list of all the volumes
+    snippet: docker volume ls
+
+27. To see the path of anonymous volume
+    snippet: docker volume inspect volume_name
+    it not the path in your host machine but in the virtual machine setup by docker
+
+28. ARGuments variables
+    Docker supports built-time ARGuments and runtime ENVironment variables
+    ARGuments variables - allows you to set flexible bit of data(i.e variables) 
+    in you docker file which you can use in there to pluck different values
+    into certain different docker instructions based on arguments that are provided
+    with the --build-arg option when you run docker build
+    set on image build via --build-arg on docker build
+    In docker file
+    snippet: ARG DEFAULT_PORT=80
+             ENV PORT $DEFAULT_PORT
+             EXPOSE $PORT
+    During docker build
+    snippet: docker build --build-arg DEFAULT_PORT=8000 .
+
+29. ENVironment variables
+    ENVironment variables - are available inside the of Dockerfile like arg
+    but also available in your entire application code 
+    you can set them via --env on docker run 
+    In docker file
+    snippet: ENV PORT 80
+             EXPOSE $PORT
+    During docker run
+    snippet: docker run --env PORT=8000 image_name
+    now this port will be available in process.ENV in node
+    we can also create a file named .env and in this file you can setup you env variables
+    inside .env -> PORT=8000
+    now during run you have to specify this .env file
+    snippet: docker run --env-file ./.env image_name
+
+30. Environment Variables & Security
+    One important note about environment variables and security: Depending on which kind of data 
+    you're storing in your environment variables, 
+    you might not want to include the secure data directly in your Dockerfile.
+    Instead, go for a separate environment variables file which is then only used at runtime 
+    (i.e. when you run your container with docker run).
+    Otherwise, the values are "baked into the image" and everyone can read these values via docker history <image>.
+    For some values, this might not matter but for credentials, private keys etc. you definitely want to avoid that!
+    If you use a separate file, the values are not part of the image since you point at that file 
+    when you run docker run. But make sure you don't commit 
+    that separate file as part of your source control repository, 
+    if you're using source control.
+
+31. 
