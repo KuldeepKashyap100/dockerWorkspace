@@ -263,7 +263,7 @@
     but also available in your entire application code 
     you can set them via --env on docker run 
     In docker file
-    snippet: ENV PORT 80
+    snippet: ENV PORT=80
              EXPOSE $PORT
     During docker run
     snippet: docker run --env PORT=8000 image_name
@@ -286,4 +286,203 @@
     that separate file as part of your source control repository, 
     if you're using source control.
 
-31. 
+31. Making container to host communication work
+    special domain to connect to local running server "host.docker.internal"
+    this is understood by docker and translated to your host machine
+    snippet: mongoose.connect("mongodb://host.docker.internal:27017/swfavorites", {}, () => {})
+
+32. Creating container networks
+    with docker we can create container networks
+    the idea is that you might have multiple containers and you want 
+    to allow communication b/w these containers and now with docker
+    you can put all of these container into one and the same network
+    by adding the --network option on docker run command
+    this then creates a network in which all the containers are able to talk to each other
+    and IPs are automatically resolved 
+    it's a really useful feature for having multiple, isolated containers with their
+    own duties and tasks and still able to talk to each other
+    snippet: docker run --network network_name container_name_1 container_name_2
+    note- unlike volume you have to create network, docker will not do that for you
+    snippet: docker network create network_name
+    Now if database server is running in container_name_2 then
+    we container_name_1 can talk to it something like this
+    snippet: mongoose.connect("mongodb://container_name_2:27017/swfavorites", {}, () => {})
+
+    Note- Docker will not replace your source code it simply detects outgoing requests
+    and resolve the IP address for such requests
+
+33. Docker Network Drivers
+    Docker Networks actually support different kinds of "Drivers" which influence the behavior of the Network.
+    The default driver is the "bridge" driver - it provides the behavior 
+    shown in this module (i.e. Containers can find each other by name if they are in the same Network).
+    The driver can be set when a Network is created, simply by adding the --driver option.
+    snippet: docker network create --driver bridge my-net
+    Of course, if you want to use the "bridge" driver, 
+    you can simply omit the entire option since "bridge" is the default anyways.
+    Docker also supports these alternative drivers - though you will use the "bridge" driver in most cases:
+    host: For standalone containers, isolation between container 
+    and host system is removed (i.e. they share localhost as a network)
+    overlay: Multiple Docker daemons (i.e. Docker running on different machines) are 
+    able to connect with each other. Only works in "Swarm" mode which is a dated / almost 
+    deprecated way of connecting multiple containers
+    macvlan: You can set a custom MAC address to a container - this address can 
+    then be used for communication with that container
+    none: All networking is disabled.
+    Third-party plugins: You can install third-party plugins which then may add all kinds of behaviors and functionalities
+    As mentioned, the "bridge" driver makes most sense in the vast majority of scenarios.
+
+34. docker-compose
+    docker compose is a tool that allows you to replace
+    docker-build and docker-run commands with just one 
+    configuration file and then a set of orchestration commands
+    to start all those services, all the containers at once 
+    and build all necessary images, if it should be required
+    and then you can also use one command to stop everything 
+    and bring every thing down
+    this approach is great for multicontainer application
+    snippet: docker-compose.yaml
+        version: 3.8 (version helps us to tell docker what features we are going to use)
+        services:    (services are basically containers)
+            mongodb:
+                image: 'mongo'             
+                # image we want to use for this container
+                volumes: 
+                    - data:/data/db        
+                    #for every volume add a dash
+                environment:
+                    MONGO_USER: root
+                    MONGO_PASSWORD: secret or - MONGO_PASSWORD=secret
+                env_file: 
+                    - ./mongo.env
+                # we don't have to specify --rm flag by default container will be removed on shutdown)
+                container_name: mongodb
+            backend:
+                build: ./backend    
+                # or 
+                # build: 
+                #    context: ./backend   (set the context in which docker file will be built)
+                #    dockerfile: Dockerfile
+                #    args:
+                #       some-args: 1 
+                # docker compose also  replaces image-build step instead of specifying finished 
+                # image we can give docker compose all the information it needs to build an image
+                # now the build option wants to know where to find the docker file that should be built
+
+                volumes:
+                    - logs:/app/logs
+                    - ./backend:/app
+                    - /app/node_modules
+
+                ports: 
+                    - '80:80'
+
+                depends_on:    
+                    - mongodb
+                # we can specify the list of other containers
+                # on which this container depends on so that docker can first 
+                # bring up those container and then this one
+                
+                # docker-compose creates a default network and adds all containers to that network
+
+            frontend:
+                build: ./frontend
+                ports: 
+                    - '3000:3000'
+                stdin_open: true
+                # to let the docker know that this service needs a open input connection 
+                tty: true
+                # tty flag to attach terminal to standard input connection
+                # both of the above two keys are equivalent to -it flag
+            volumes:      (all the named volumes used above have to be listed here)
+                data:     (no value needs to be assigned just list them here)
+                logs:
+            
+
+                 
+35. To start services mentioned in docker-compose
+    and it will not just start the containers 
+    it will also pull and build all the images that might be required
+    snippet: docker-compose up (build + run)
+             docker-compose build (build)
+
+36. If we want to shut and remove all containers
+    it does not deletes volumes though if you want to do that add -v flag
+    snippet: docker-compose down
+
+37. Utility containers
+    these containers only have certain environment in them.
+    let's say a nodejs or php environment something like that.
+    The idea is that they don't start an application
+    when you run them but instead you run them in conjunction with some 
+    command specified by you to then execute certain task 
+    snippet: docker run mynpm init
+    this is special syntax adding a extra command after image name
+    snippet: 
+    docker run -it -d node
+    docker exec -it container_name npm init
+
+    this can be useful if want to read logs from running containers
+
+38. We can setup ec2 instance on aws and use ssh(secure shell)
+    to communicate to this remote machine
+
+39. Pushing our local image to the cloud
+    we can prepare our image locally and then just get the finished
+    image onto the remote host to then run it as a container
+    and we can use docker hub for that.
+    we can build our image locally then push it to docker hub
+    and then pull it from remote server to then run it on the remote server.
+    first create new repository on docker hub
+    now we can push to this repository by creating an image on our local machine
+    snippet:
+    docker build local_image_name . 
+    docker tag local_image_name kuldeepkashyap/temp-repo
+    docker push kuldeepkashyap/temp-repo
+
+40. Now that image is pushed we have to now and run it on remote machine.
+    snippet: docker run -d --rm kuldeepkashyap/temp-repo
+    we didn't need to configure node.js environment on the server
+    but we just installed docker and used it run the locally build image.
+
+41. To do any changes in container running on remote machine,
+    do the changes on your local and rebuild the image and add appropriate tag,
+    and push it to docker hub.
+    Now on the remote machine stop the currently running container, 
+    pull the updated image and run it.
+    snippet: 
+    docker build local_image_name . 
+    docker tag local_image_name kuldeepkashyap/temp-repo
+    docker push kuldeepkashyap/temp-repo
+
+    docker stop container_name
+    docker pull kuldeepkashyap/temp-repo
+    docker run -d --rm kuldeepkashyap/temp-repo
+
+42. Disadvantages of current approach
+    you fully own ec2 machine, you are fully responsible for it and also for its security
+    you are responsible for configuration of this remote machine
+    you have to take care if it's powerful enough
+    you have to replace it with more powerful one if you get more traffic.
+    you also have to managed in which network it is.
+    the security groups and therefore firewall
+    solution: Managed remote machines(AWS ECS) (elastic container service)
+
+43. Configuring ECS has 4 steps
+    container definition: configure all the containers that our application going to use
+    task definition: a blueprint for you application here we can tell aws how it should launch our Container
+        not how it should execute docker run but how the server on which it runs this should be configured
+        here we are telling aws how it should execute our containers and which environment it should
+        generally setup for them.
+        fargate(default): which lauches it in a serverless-mode which means aws does not create an ec2 instance
+        but instead it stores your container and your run settings and whenever there is a request that requires 
+        the container to do something it starts the container up and handles that request and then stops it again
+        which ofcourse is cost effective because you pay for the time your container is executing.
+    service: controls the configured application should be executed 
+            ex - you can add load balancer here
+    cluster: a overall network in which services is run 
+    
+
+
+
+
+
