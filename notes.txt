@@ -481,8 +481,85 @@
             ex - you can add load balancer here
     cluster: a overall network in which services is run 
     
+44. EFS(elastic file system)
+    EFS allows us to attach a file system to our containers
+    we have to configure volume or bind mount that container is using EFS.
+    EFS allows us to attach hard drives to containers which will survive 
+    even if these containers are redeployed.
+
+45. Multi-stage builds
+    allows you to have one dockerfile that define multiple build steps
+    or setup steps so called stages inside of that file
+    stages can copy results(created files and folders) from each other 
+    so we can have one stage to create the optimized files
+    and another stage to serve them.
+    we can either build the complete image or select individual stages
+    Every "FROM" instruction creates a new stage in your docker file 
+    we must have only one base image but we can switch that image
+    in that case the previous steps will be discarded and we will
+    switch to new base image.
+    but there is a special keyword("AS") if we don't want our changes to be discarded.
+    snippet:
+    FROM node:14-alpine as frontendApp
+    WORKDIR /app
+    COPY package.json .
+    RUN npm install
+    COPY . .
+    RUN npm build
+
+    FROM nginx:stable-alpine
+    COPY --from=frontendApp /app/build /usr/share/nginx/html
+    EXPOSE 80
+    CMD ["nginx", "-g", "daemon off;"]
+
+46. we can also stop the build at particular stage using --target flag.
+    this is useful in more complex projects
+    snippet: docker build --target frontendApp -f frontend/Dockerfile.prod ./frontend
+    this will stop the build at "RUN npm build"
+
+47. 3 ways to configure aws service
+    -> by using visual user interface 
+    -> by using command line tool( ecs-cli )
+    -> by using configuration files(YAML) which aws reads and make modifications
 
 
+Kubernetes
 
+48. Kubernetes
+    is more like a framework(a collection of tools), a collection of concepts, a standard
+    which will help us with container orchestration and large scale deployments
+    independent of the cloud provider we might be using
 
+49. Problems with current deployment process
+    -> we have to configure ec2 on our own and we have to take care of OS update and security
+    -> container might crash/go down and need to be replaced with a new container
+    -> we might need more container instances upon traffic spikes
+    -> incoming traffic should be distributed evenly b/w container instances
+    
+50. Advantages of using ECS
+    -> ECS monitor health of our containers and restarts them when they crash
+    -> ECS also helps us with autoscaling
+    -> ECS also have a tool called loadbalancer to distribute traffic evenly
+    
 
+51. Disadvantages of using ECS 
+    if we use a specific cloud service by some cloud provider
+    we are basically locked into that service 
+    which means if we want to switch to another service provided by another cloud provider
+    the config files we wrote for aws ecs won't work there becasue that is a aws specific config
+    and we have to learn first about ECS and if want to switch learn about another service
+    and that's where kubernetes can help us
+
+52. why kubernetes?
+    kubernetes can help us with the problem mentioned above
+    with kubernetes we have a way of defining our deployments, 
+    our scaling of containers 
+    and how containers should be monitored and replaced if they fail
+    we have a way of defining all of that independent of the cloud service we are using
+    because kubernetes is an open source standard and de-facto standard for managing container deployments
+    and for orchestrating containers and it can help us with tasks like automatic deployment
+    with scaling and load balancing and with managing our deployments
+    kubernetes simply allows us to write down a kubernetes configuration
+    where we define our desired deployment which container we want to deploy
+    how many instances, if it should scale up, if they should replaced and so on
+    
