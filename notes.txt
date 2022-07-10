@@ -562,4 +562,114 @@ Kubernetes
     kubernetes simply allows us to write down a kubernetes configuration
     where we define our desired deployment which container we want to deploy
     how many instances, if it should scale up, if they should replaced and so on
+    and this configuration will work with any cloud provider as long as it supports kubernetes
+    and even if does not support it we can install some kubernetes software on any machine you own
+    so with kubernetes we have a standardized way of describing the to-be-managed resources
+    of the kubernetes cluster.
+    and what's even better is the fact that we can actually merge certain cloud provider-specific options
+    into this config file so that if some cloud provider would require additional configuration
+    you could just add that configuration into that main file.
     
+53. Kubernetes - having this standarized way of describing deployments
+    we can think of kubernetes as docker-compose for multiple machines
+    because docker-compose helps us manage multi container projects on our local machine
+
+54. Pod
+    In kubernetes world a container is managed by pod
+    you can think of a pod as the smallest possible unit in the kubernetes world
+    which you can define in some configuration file for kubernetes to create.
+    and pod can hold a single or multiple containers and their resources(volumes, IP, run config)
+    but the smallest unit possible is simply one pod which is responsible for running a container.
+    kubernetes can create or delete pods.
+   
+55. Worker node
+    the pod with the container inside of it then itself runs on a so called worker node.
+    worker node run the containers of the application.
+    you can think of worker node as your machines/ virtual instances.
+    A worker node is simply a machine, a computer somewhere with a certain amount of cpu and memory
+    and on that machine, you can run your pods. 
+    And you can have more than one pod running on one of the same worker node.
+    worker node is managed by master node(to be precise what's happening on the worker node like creating a pod).
+    Pods themselves also managed by master node 
+    we can have more than one running pod on a worker node. now that can be copy of another pod,
+    incase you are scaling it up and you want to have multiple instances off one and the same 
+    container up and running to distribute incoming traffic. but it can also be a pod with a 
+    totally different container inside of it to do a totally different task because worker node is not task specific.
+    software needed on worker machine: 
+    docker
+    kubelet - which is basically  the communication device b/w worker node and master node
+    kube-proxy - which is responsible for handling incoming and outgoing traffic to insure that 
+                everything is working as desired and only allowed traffic is able to reach the pods.
+                and only allowed traffice is able to leave the worker node.
+    
+56. Proxy
+    Another tool kubernetes sets up for you in the end on a worker node to control the network traffic
+    of the pods on that worker node. so basically to control whether pods can reach the internet 
+    and how these pods and therefore the container inside them can be reached from outside world.
+    If you are running a web app in a container in such a pod for example.
+    the proxy needs to be configured such that traffic from the outside world from your users 
+    is able to reach this container.
+
+57. Master node
+    we use kubernetes to dynamically add/remove containers and therefore pods as traffic increases or decreases.
+    these pods are automatically distributed by kubernetes across all worker nodes so you can have different
+    and equal containers running on multiple worker nodes to distribute workload evenly.
+    now all these worker nodes and the pods and containers running on them needs to be controlled somehow.
+    someone needs to create and start these containers and pods and someone needs to replace or shut them down
+    if they are failing or not needed anymore and that's done by the master node(specially by the control plane).
+    services running on master machine: 
+    API server - simple service running on master node machine which is counterpoint for kublet services
+                running on worker nodes. so this is for communication b/w worker node and master node.
+    scheduler - responsible for watching our pods and choosing worker nodes and choosing worker nodes
+                on which new pods should wbe created on, in case new pod needs to be addded 
+                because a new pod got unhealthy and went down or because of scaling, we needed to create
+                a new pod. so this is responsible for telling the API server what to tell the worker nodes.
+    kube-controller-manager - watches and controls the worker nodes overall, and which is responsible for
+                ensuring that we got the correct number of pods up and running and therefore, it works 
+                closely together with scheduler and API server.
+    cloud-controller-manager - this is a specific version of kube-controller-manager, which is doing the same thing
+                but which is cloud-provider specific and which actually then knows how to tell that cloud provider,
+                what to do. so this cloud-controller-manager just translates instructions to AWS.
+                Big cloud-provider already go services which take all that away from you(you might not need to 
+                manually create the master and worker nodes and install all these services) so you just need
+                to provide your kubernetes config and they do all the heavy lifting.
+
+58. Control plane
+    This is basically the control center which then interacts with worker nodes to control them.
+    so when working with kubernetes we don't directly interact with worker nodes or pods though we could do that,
+    instead we let kubernetes and this control plane do that heavy lifting and you as a developer
+    just define the desired end state kubernetes should take into account.
+    so this master nodes is simply another server(renote machine) which has this control plane running on it,
+    which then is responsible for interacting with the worker nodes and the pods running on them.
+    now theoretically, you can have one machine which acts as both the master and only worker node,
+    but for bigger deployments ofcourse you will have a master node which itself might actually be split
+    across multiple machines to ensure high availability and your worker nodes would then be other instances
+    other machine independent from the master node so that if one worker node goes down,
+    your master node doesn't go down together with it.
+
+59. Cluster
+    all of the things we discussed above will form a cluster of your master and worker nodes
+    and therefore one network in which all these different parts are connected and then your master
+    node is able to send instructions to cloud provider API, to tell that cloud provider to create it's
+    cloud provider specific resources to replicate this desired big picture on that cloud provider
+
+60. Services
+    A logical set(group) of Pods with a unique, Pod- and container- independent IP address.
+    services are important to reach our pods and containers running inside them.
+    it is just a term for exposing certain pods to the outside world.
+
+60. What Kubernetes will do for you?
+    we need to provide a certain environment in which kubernetes is able to run.
+    you as a developer/administrator have to do is you have to create and setup the cluster
+    and the worker node and the master node on which kubernetes is then installed and does its thing.
+    you have to install all the kubernetes software on these node so on these machines which are 
+    part of your cluster and you have to configure all these things kubernetes needs 
+    depending on the cloud provider you might be using you also might need to set up extra resources
+    your kubernetes cluster might need eventually(like load balancer or file system).
+
+61. What are things you need to do in advance in order to then use kubernetes?
+    kubernetes will use the resources discussed above, once it is installed and set up.
+    kubernetes will manage these pods, it will create them, automatically distribute them 
+    to take advantage of the available resources. it will monitor and restart them if they fail.
+    it will manage the running deployment, it will ensure that it runs smoothly and that it stays up.
+    it will start the containers for you.
