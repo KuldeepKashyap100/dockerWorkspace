@@ -673,3 +673,25 @@ Kubernetes
     to take advantage of the available resources. it will monitor and restart them if they fail.
     it will manage the running deployment, it will ensure that it runs smoothly and that it stays up.
     it will start the containers for you.
+
+62. Kubermatic 
+    is a tool which can help us create resources on cloud like AWS.
+    if you don't wanna create everything manually.
+    AWS also has ELS(Elastic kubernetes service) which also helps us to create resources.
+
+63. Kubectl (kube-control tool)
+    is used to send instructions to the cluster for ex- to create a new deployment
+    delete a deployment or change our running deployment.
+    with the kube-control tool you as the developer and administrator
+    are able to send instructions to the master node whatever it needs to do with the worker nodes.
+
+64. Minikube
+    to setup dummy cluster locally we can use a tool called Minikube.
+
+65. To create cluster locally:
+    brew install minikube
+    brew install kubectl
+    minikube start --driver=docker 
+    minikube status 
+    minikube dashboard 
+     
