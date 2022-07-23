@@ -180,7 +180,7 @@
     Name Volumes is great for the data that should be persistent but which you don't need to edit directly
     because you don't have access to that folder on you host machine
     snippet: docker run 3000:3000 -v host_path:container_path image_name
-    ex- docker run 3000:3000 -v feedback:/app/feedback image_name
+    ex- docker run 3000:3000 -v "feedback:/app/feedback" image_name
 
 22. Bind Mounts 
     problem: during development we change code a lot but we have to rebuild image every time
@@ -195,7 +195,7 @@
     we could then make sure that container is aware of that and the souce is actually not used
     from that copied in snapshot but instead from bind mount
     so bind mounts are perfect for persistent and editable data.
-    snippet: docker run 3000:3000 -v "absolute_project_path:/app image_name"
+    snippet: docker run 3000:3000 -v "absolute_project_path:/app" image_name
     ex: docker run 3000:3000 -v "/Users/kuldeep/dev/nodeProject:/app" image_name
     note- If you don't always want to copy and use the full path, you can use these shortcuts:
     macOS / Linux: -v $(pwd):/app
@@ -469,7 +469,7 @@
 
 43. Configuring ECS has 4 steps
     container definition: configure all the containers that our application going to use
-    task definition: a blueprint for you application here we can tell aws how it should launch our Container
+    task definition: a blueprint for your application here we can tell aws how it should launch our Container
         not how it should execute docker run but how the server on which it runs this should be configured
         here we are telling aws how it should execute our containers and which environment it should
         generally setup for them.
@@ -577,7 +577,7 @@ Kubernetes
 54. Pod
     In kubernetes world a container is managed by pod
     you can think of a pod as the smallest possible unit in the kubernetes world
-    which you can define in some configuration file for kubernetes to create.
+    which you can define in some configuration file for kubernetes to create
     and pod can hold a single or multiple containers and their resources(volumes, IP, run config)
     but the smallest unit possible is simply one pod which is responsible for running a container.
     kubernetes can create or delete pods.
@@ -630,7 +630,7 @@ Kubernetes
     cloud-controller-manager - this is a specific version of kube-controller-manager, which is doing the same thing
                 but which is cloud-provider specific and which actually then knows how to tell that cloud provider,
                 what to do. so this cloud-controller-manager just translates instructions to AWS.
-                Big cloud-provider already go services which take all that away from you(you might not need to 
+                Big cloud-provider already got services which take all that away from you(you might not need to 
                 manually create the master and worker nodes and install all these services) so you just need
                 to provide your kubernetes config and they do all the heavy lifting.
 
@@ -694,4 +694,221 @@ Kubernetes
     minikube start --driver=docker 
     minikube status 
     minikube dashboard 
+    kubectl create deployment first-app --image=kuldeepkashyap/kube-first-app
+    kubectl get deployments
+    kubectl get pods 
      
+66. Kubernetes Objects
+    kubernetes works with so called objects
+    kubernetes knows a couple of objects: pods, deployments, servies, volumes etc.
+    the idea behind these objects is that you can create such an object by executing
+    a certain command and then kubernetes will take that object created by you and 
+    then it will do something based on the instructions encoded in that object
+    and these objects can actually be created in two different ways, imperatively
+    or declaratively. 
+
+67. Pod Object 
+    If you wanna tell kubernetes that it should create a pod, 
+    run a container and do that on some worker node in the cluster,
+    you can do that by creating a pod object in code or with help of a command,
+    and sending that object to kubernetes, 
+    -> pods are not just to run a container
+    -> though they can also hold shared resources which these container might utilize
+        most importantly volumes.
+    -> pods are part of the cluster therefore it can communicate with our pods 
+        or outside world. but by default, a pod has a cluster internal ip address
+        now that is something which we'll be able to change or we'll be able to 
+        communicate with pods nonetheless, even from outside the cluster.
+        but the internal ip address can be used to send requests to that pod,
+        and therefore to the containers running in the pod.
+        now if you have multiple container in one of the same pod, 
+        then these containers will be able to communicate with each other 
+        by using a localhost address. pods are similar to tasks in AWS ESC.
+    note: pods are designed to be ephemeral: kubernetes will start, stop, and replace them as needed.
+    which basically means that they don't persist. if a pods is replaced or removed by kubernetes
+    all the resources in the pod for ex- data stored and created by a container is lost.
+
+68. Deployment Object
+    -> we don't create pod container on our own instead we create deployment object 
+    which you then give instructions about the number of pods and containers it should create 
+    and manage for you. the deployment object is able to control one or multiple pods.
+    the core philosophy behind this deployment object, which under the hood is controller object,
+    is that we set a desired target state for ex- we have 2 pods with this container up and running
+    and then kubernetes will do everything it needs to do to reach this target state.
+    so we can can define what we want and kubernetes will get us there.
+    and the advantage of this is that the pod objects are then created by kubernetes and 
+    the pods are therefore created by kubernetes, the containers are started by kubernetes 
+    and kubernetes will also placed these pods on worker nodes which have sufficient memory
+    and cpu capacity for these new pods. so we don't manually have to pick a remote machine
+    and place our pods on there.
+
+    -> Another advantage of using deployment object is that we can also pause or delete
+    deployments and rolled back. so if mess something up and our application fails,
+    we don't have to rush to change our code and fix the error and replace the failing pod with a new one.
+    instead we can just roll back the failing deployment and go back to the previous deployment which worked.
+
+    -> Another feature is that the deployements can also be scaled.
+    we can tell kubernetes that we now want to have more pods or less pods and we can also use a 
+    feature called autoscaling where we can set certain metrics for ex incoming traffic and cpu utilization
+    and when these metrics are exceeded kubernetes automatically creates more pods and therefore more 
+    running container instances.
+
+69. Commands and what's happening behind the scenes.
+    -> snippet: kubectl create deployment --image=kuldeepkashyap/kube-first-app
+    this creates a deployment object and then automatically sends it to our kubernetes cluster(to master node)
+    so on master node the scheduler analyses the currently running pods and it finds the best node for the 
+    newly created pod and then this newly created pod will be moved to one of our worker node
+    and on that worker node we have kublet service which now manages the pod, starts the container in the pod,
+    and basically also monitors this pod and checks its health now this pod continer based on the image which we
+    specified in --image flag which we created when we created deployment object. 
+
+70. Service Object
+    to reach a pod and the container running in a pod, we need a service.
+    Because service object is another object kubernetes knows, which is responsible for
+    exposing pods to other pods in the cluster or to visitors outside the cluster.
+    pods already have an internal IP address by default.
+    but there are 2 problems with this internal ip address,
+    for one we can't use that to access the pod from outside the cluster, which is a problem.
+    and the second problem is that it will change whenever a pod is replaced.
+    so we can't reply on pod keeping its IP address, therefore the IP address is not really a great tool 
+    for communicating with the pod even if it would be cluster internal.
+    now service groups pods together and gives them a shared address(a shared IP address)
+    and this address then won't change so you can use a service to move multiple pods 
+    into that service and make them reachable on that service unchangable IP address
+    and even better than that you can also tell the service to expose this address
+    which doesn't change not just inside of the cluster but outside of the cluster
+    so that pods can be accessed from outside of the cluster.
+    the default is that it's internal only but with a service, we can overwrite this.
+
+71. Expose a created by deployment by creating such a service 
+    snippet: kubectl expose deployment first-app --type=LoadBalancer --port=8080
+             kubectl get services
+             minikube service first-app (it for local only to map special port to an IP which we can reach from our local machine)
+    --type=ClusterIP this is a default type which means it will only be reachable from inside the cluster
+    --type=NodePort means this deployment should be exposed with help of the IP address of the worker node on which it is running
+    --type=LoadBalancer it utilizes a load balancer which has to exists in the insfrastructure on which our cluster runs 
+        and then this load balancer will actually generate a unique address for this service and it will not just do that,
+        as the name implies it will also evenly distribute incoming traffic across all pods, which are part of this service.
+
+72. Scaling pods(create multiple instances of the pod)
+    snippet: kubectl scale deployment/first-app --replicas=3
+
+73. Updating deployments
+    snippet: 
+    docker build -t kuldeepkashyap/kube-first-app:2 .
+    docker push kuldeepkashyap/kube-first-app:2
+    kubectl set image deployment/first-app kube-first-app=kuldeepkashyap/kube-first-app:2
+    -> to update the image of the currently deployed container(i.e kube-first-app) container_name=image_name
+
+74. To check the current deployment status.
+    snippet: kubectl rollout status deployment/first-app
+
+75. Deployment rolllback.
+    snippet: kubectl rollout undo deployment/first-app
+
+76. Deployment history
+    snippet: kubectl rollout history deployment/first-app
+
+77. Delete deployment and service.
+    snippet: kubectl delete service first-app
+             kubectl delete deployment first-app
+            
+78. The approach discussed above i.e by using commands is Imperative approach.
+    there is another approach called Declarative approach,
+    in which we can create k8s config file.
+    Declarative approach is like running docker run command.
+    Imperative approach is like runnig docker-compose up.
+
+79. Declarative approach
+    -> create a yaml file(any name) for k8s config.
+    snippet: deployment.yaml
+    apiVersion: apps/v1
+    # no matter which kind of resource we are configuring
+    # if it is a deployment or service, whatever it is we need to specify an apiVersion
+    # k8s is still under active development so there are multiple apiVersions available
+
+    kind: Deployment
+    # to let k8s know what kind of k8s object we want to create
+
+    metadata: 
+        name: second-app-deployment
+    # this is not some random data that we come up with but it includes crucial things like the name
+    # of the object that we are creating 
+
+    spec: 
+    # this is the meat of this object because here we define how this deployment should be configured.
+    # we add pieces of information about this deployment
+    # for ex- the number of pod instances we wanna have as a default we don't add it the default value is 1.
+
+        replicas: 3
+        # how many pods we want to be created to start with.
+        # we can even set it 0, if we don't want anypods to be launched initially.
+
+        selector: 
+            matchLabels: 
+                app: second-app
+                tier: backend
+            # here we add key-value pair of the pod labels we wanna match with this deployment.
+            # what this means is, we got a template for this deployment and therefore it should be
+            # obvious which pods are created by this deployment. the pods defined in this template
+            # will be created when this deployment is applied but deployments are dynamic objects
+            # in the k8s world. for ex if you scale up the number of pods after a deployment has been 
+            # created these new pods which are created will still automatically be managed by already
+            # existing deployment so deployment continuously watches all the pods which are out there 
+            # and sees if there are any pods it should control. and it selects the to be controlled pods 
+            # with a so called selector. now there are different types of selectors here for deployment
+            # we can use two different kinds of selecting. we can match labels and we can match expressions.
+            matchExpressions:
+                - {key: app, operator: In, values: [second-app, first-app]}
+                # operator in means app has one of the value specificied in values array
+
+
+        template: 
+        # here we will define the pods that should be created as part of this deployment
+
+            metadata:
+            # because pod is a new object in the k8s world.
+
+                lables:
+                # we can add any key-value pair in labels 
+                    app: second-app
+
+            spec: 
+            # how this pod should be configured. 
+            # we did specification before but that was the specification
+            # for the overall deployment
+
+                containers: 
+                # here we can define a list of containers or single container
+                # to defien the elements of the list in yaml we use dash(-)
+                    - name: second-node
+                      image: kuldeepkashyap/kube-first-app:2
+                      imagePullPolicy: Always
+                      # always pull the latest image
+                      livenessProbe: 
+                      # How k8s check whether your pods and containers in the pods are healthy or not?
+                      # periodic probe of container livenessProbe. container will be restarted if the probe fails.
+                        httpGet: 
+                            path: /api/health
+                            port: 8080
+                        periodSeconds: 10
+                        initialDelaySeconds: 5
+
+80. how can we now apply the above deployment?
+    how can we make the cluster aware of it? and have it create that deployment and pod?
+    snippet: kubectl apply -f=deployment.yaml
+    "apply" command simply simply applies a config file to the connected cluster
+
+81. how can we apply the service?
+    snippet:
+    kubectl apply -f=service.yaml 
+    minikube service service_name (after the service is created expose it using minikube)
+
+
+82. Deleting resources
+    snippet: kubectl delete -f=deployment.yaml, service.yaml
+   
+83. 
+    
+
+
