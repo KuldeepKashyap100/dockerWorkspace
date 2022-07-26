@@ -14,14 +14,23 @@ spec:
     spec: 
       containers:
         - name: story
-          image: kuldeepkashyap/kube-data:1
+          image: kuldeepkashyap/kube-data
           imagePullPolicy: Always
+          env: 
+            - name: STORY_FOLDER 
+              # value: 'story'
+              valueFrom: 
+                configMapKeyRef:
+                    name: data-store-env 
+                    key: folder
           volumeMounts: 
             - mountPath: /app/story
               name: story-volume
       volumes:
         - name: story-volume 
           # emptyDir: {}
-          hostPath: 
-            path: /data
-            type: DirectoryOrCreate
+          # hostPath: 
+          #   path: /data
+          #   type: DirectoryOrCreate
+          persistentVolumeClaim:
+            claimName: host-pv-claim
