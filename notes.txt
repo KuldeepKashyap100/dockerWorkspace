@@ -880,11 +880,18 @@ Kubernetes
 
                 containers: 
                 # here we can define a list of containers or single container
-                # to defien the elements of the list in yaml we use dash(-)
+                # to define the elements of the list in yaml we use dash(-)
                     - name: second-node
                       image: kuldeepkashyap/kube-first-app:2
                       imagePullPolicy: Always
                       # always pull the latest image
+                      env: 
+                        - name: STORY_FOLDER 
+                          # value: 'story'
+                          valueFrom: 
+                            configMapKeyRef:
+                                name: data-store-env 
+                                key: folder
                       livenessProbe: 
                       # How k8s check whether your pods and containers in the pods are healthy or not?
                       # periodic probe of container livenessProbe. container will be restarted if the probe fails.
@@ -893,6 +900,43 @@ Kubernetes
                             port: 8080
                         periodSeconds: 10
                         initialDelaySeconds: 5
+                    volumeMounts: 
+                        - mountPath: /app/story
+                        # this is the path where emptyDir volume should be mounted in
+                          name: story-volume 
+
+                volumes:
+                    - name: story-volume 
+                      emptyDir: {}
+                      # this is a volume type, emptyDir simply creates a new empty directory
+                      # whenever the pod starts and it keeps this directory alive and filled with data
+                      # as long as the pod is alive, containers can then write to this directory
+                      # and if containers restarts or are removed the data survives
+                      # but if the pod should be removed, this directory is removed.
+                      # and when the pod is recreated a new empty directory is created.
+                      # now we have setup the volume but we also need to bind it into a container
+                      # we do that in container config.
+                      # disadvantage of this emptyDir is if we create 2 pods and since volume is 
+                      # closely related with pod and if one of the pod goes down we won't be able to access data using 
+                      # other running pod.
+                    
+                      hostPath:
+                        path: /data
+                        type: DirectoryOrCreate
+                      # hostPath volume driver allows us to set a path on the host machine,
+                      # so on the node, the real machine running the pod and then the data from that path
+                      # will be exposed to the different pods so multiple pods can now share one in the same path on the host machine
+                      # disadvantage of using hostPath is we have a bigger cluster with multiple working nodes
+                      # the hostPath would still be node specific so multiple pods, multiple replicas
+                      # running on different nodes would not have access to the same data.
+                      # hostPath is useful if want to make your data kind of independent from the different pods.
+                        
+                      # csi:
+                      # csi(container storage interface)
+                      # this is a relatively new volume type, it was added to make sure 
+                      # that they don't have to add more and more built-in types for different cloud providers and
+                      # different use cases but instead they expose a clearly defined interface
+                      # and then anyone can build driver solutions that utilize this interface.
 
 80. how can we now apply the above deployment?
     how can we make the cluster aware of it? and have it create that deployment and pod?
@@ -908,7 +952,114 @@ Kubernetes
 82. Deleting resources
     snippet: kubectl delete -f=deployment.yaml, service.yaml
    
-83. 
+83. Kubernetes and volumes
+    kubernetes can mount volumes into containers.
+    a broad variety of volume types/drivers are supported.
+    -> Local volumes(i.e on nodes)
+    -> Cloud-provider specific Volumes
+    volume lifetime depends on the pod lifetime, because volumes are part of the pods.
+    therefore it survives container restarts and removals, because the container is inside the pod.
+    but if the pod is removed, volume will also be removed. and if you want a volume to survive the removal
+    of a pod, there also will be a way for achieving that. 
+    Kubernetes has volume support but volumes managed by kubernetes are not exactly 
+    the same as volumes managed by docker. kubernetes volumes are much more powerful than docker volume.
+
+84. Kubernetes volumes support different drivers and types
+    when using docker and docker-compose we don't necessarily need that much support
+    for different storage systems. but with k8s of course, running your application
+    on a cluster with multiple nodes, on different hosting environments for ex- on aws, or your own data center
+    of course it needs to be flexible regarding how data should be stored. which service by some cloud provider 
+    should be used for example or if it should be stored on the hard drive on specific machine.
+
+85. kubernetes volumes are not necessarily persistent,
+    they do survive container restarts but not pod restarts at least not by default.
+    and on the other hand for docker since we don't have the concept of pods, and different machines and nodes.
+    data is always persistent until manually cleared.
+
+86. k8s Volumes
+    have one disadvantage they are destroyed when a pod is removed when a pod is terminated
+    and replaced by a new pod for example or if you scale your pods and you go from one pod to
+    two pods then depending on the type of volume you are using the new pod might not have access
+    to data written by the first pod for ex- when using the emptyDir. now when you use the hostPath type
+    this problem was kind of solved but this solution only works with minikube because it's a one node environment
+    all the pods always run on the same worker node because with minikube, we only have one worker node
+    now of course, once you move from your local environment(i.e minikube) to a real deployment and real cluster
+    for ex- on AWS, you will have multiple nodes and then hostPath won't help you anymore.
+
+87. k8s Persistent volumes
+    these volumes will always persist and they will be pod and node independent
+    they key idea is that volume will be detached from the pod and that includes total detachment from the pod life cycle
+    with persistent volumes we will have pod and ndoe independence and as a cluster administrator
+    we will have full power over how this volume is configured, we don't need to configure it multiple times
+    for different pods and in different deployment yaml files. instead we will define it once and then use it in multiple pods.
+    persistent volume is a new resource type, a new entity in your cluster.
+    which are detached from your nodes and from your pods, instead you can create so-called persistent volume claims,
+    these will be part of the pods. and these claims could reach out to these standalone persistent volumes,
+    to request access to them. And the idea is that these persistent volumes of course don't store data on one of these nodes.
+    but instead they are really independent from the node.
+    snippet:
+    apiVersion: v1
+    kind: PersistentVolume
+    metadata:
+        name: host-pv 
+    spec: 
+        capacity: 
+            storage: 1Gi
+        # this is compined capacity that all the pods will be claiming
+
+        volumeMode: Filesystem
+        # 2 types of modes- Block and Filesystem
+
+        accessModes: 
+            - ReadWriteOnce
+            - ReadOnlyMany 
+            - ReadWriteMany
+        # you can specify all(read, write...) because it's only when you claim a volume that you then have to define 
+        # how you want to claim this volume for a given pod. here we are justifying what should generally be allowed
+        # so how this may be claimed. 
+        # ReadWriteOnce - means that this volume can be mounted as a read-write volume by a single node.
+        # so by multiple pods but they all have to be on same node. 
+        # ReadOnlyMany - read only but it can be claimed by multiple nodes. so multiple pods on different nodes
+
+        storageClassName: standard
+
+        hostPath:
+            path: /data 
+            type: DirectoryOrCreate
+
+88. Storage Classes
+    storage class is another concept in k8s, to give administrators fine grain control over 
+    how storage is managed and how volumes can be configured. it's an advanced concept and for 
+    our purpose the default storage class is absolutely fine.
+    the storage class in the end defines to k8s how exactly that storage which we want to use
+    should be provisioned. so behind the scenes the storage class will provide important information
+    to the PersistentVolume configuration we set up. It works together with PersistentVolume
+    and our standard storage class which we got on minikube is already configured for this hostPath type.
+    we just have to make sure though that we are using this storage class
+    snippet: kubectl get sc
+
+89. ConfigMaps
+    If we don't want to configure environment variables in container block of deployment.yaml.
+    instead you wanna have key-value pairs in separate file or separate resource and therefore
+    a new entity in your cluster. may be also such that different container specs from different pods
+    can utilize the same environment variables this would be a common use case and something we can 
+    easily implement with k8s.
+    snippet:
+    apiVersion: v1 
+    kind: ConfigMap 
+    metadata:
+        name: data-store-env
+    data:
+        folder: 'story'
     
+    -> in container block of deployment.yaml
+    env: 
+    - name: STORY_FOLDER 
+        value: 'story'
+        valueFrom: 
+        configMapKeyRef:
+            name: data-store-env 
+            key: folder
+
 
 
