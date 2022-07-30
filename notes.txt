@@ -1062,4 +1062,10 @@ Kubernetes
             name: data-store-env 
             key: folder
 
-90. 
+90. Pod to Pod communication with IP addresses and environment variables
+    we can use the Ip address of first service in second service to communicate with first service.
+    but we have to look up for this ip address and set it environment var of second service and use it env-var in code of second service
+    but manually gettting this Ip address is bit annoying there is more convenient way,
+    k8s will give you automatically generated environment variables in your programs with information about
+    all the services which are running in your cluster.
+    snippet: process.env.SERVICENAME_SERVICE_HOST
