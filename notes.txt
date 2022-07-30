@@ -1069,3 +1069,14 @@ Kubernetes
     k8s will give you automatically generated environment variables in your programs with information about
     all the services which are running in your cluster.
     snippet: process.env.SERVICENAME_SERVICE_HOST
+
+91. AWS EKS(Elastic kubernetes service)
+    Managed service for kubernetes deployments.
+
+92. Minicube config
+    minkube config file: /Users/kuldeep.kashyap/.kube/config
+    this is a file which will be used by kubectl command 
+    and at the moment it holds information which allows kubectl to connect to the minikube cluster
+    which runs in a virtual machine(docker). Now we wanna change this file such that it's able to talk 
+    to our EKS cluster. take a backup of this file.
+    snippet:  aws eks --region us-east-1 update-kubeconfig --name AwsClusterName
