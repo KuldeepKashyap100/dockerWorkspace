@@ -5,7 +5,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const axios = require('axios');
 
-const filePath = path.join(__dirname, process.env.TASKS_FOLDER, 'tasks.txt');
+const filePath = path.join(__dirname, process.env.TASKS_FOLDER);
 
 const app = express();
 
@@ -17,14 +17,14 @@ const extractAndVerifyToken = async (headers) => {
   }
   const token = headers.authorization.split(' ')[1]; // expects Bearer TOKEN
 
-  const response = await axios.get('http://auth/verify-token/' + token);
-  return response.data.uid;
+  // const response = await axios.get(`http://${process.env.AUTH_ADDRESS}/verify-token/` + token);
+  return 1;
 };
 
 app.get('/tasks', async (req, res) => {
   try {
     const uid = await extractAndVerifyToken(req.headers); // we don't really need the uid
-    fs.readFile(filePath, (err, data) => {
+    fs.readFile(filePath  + 'tasks.txt', (err, data) => {
       if (err) {
         console.log(err);
         return res.status(500).json({ message: 'Loading the tasks failed.' });
@@ -49,7 +49,9 @@ app.post('/tasks', async (req, res) => {
     const title = req.body.title;
     const task = { title, text };
     const jsonTask = JSON.stringify(task);
-    fs.appendFile(filePath, jsonTask + 'TASK_SPLIT', (err) => {
+    if(!fs.existsSync(filePath))
+      fs.mkdirSync(filePath);
+    fs.appendFile(filePath + 'tasks.txt', jsonTask + 'TASK_SPLIT', (err) => {
       if (err) {
         console.log(err);
         return res.status(500).json({ message: 'Storing the task failed.' });
