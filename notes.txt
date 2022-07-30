@@ -789,6 +789,7 @@ Kubernetes
     --type=LoadBalancer it utilizes a load balancer which has to exists in the insfrastructure on which our cluster runs 
         and then this load balancer will actually generate a unique address for this service and it will not just do that,
         as the name implies it will also evenly distribute incoming traffic across all pods, which are part of this service.
+        It's not that other type does not do load balancing they do interally select pod in load balanced way.
 
 72. Scaling pods(create multiple instances of the pod)
     snippet: kubectl scale deployment/first-app --replicas=3
@@ -1061,5 +1062,4 @@ Kubernetes
             name: data-store-env 
             key: folder
 
-
-
+90. 
